@@ -12,7 +12,6 @@ export interface SpeakerConfig {
   emotion: string;
   volume: number;
   speed: string;
-  seeds: number[]; // Array of 5 seeds
   toneDescription: string;
   temperature: number; // Added temperature for speech variability
 }

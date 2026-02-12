@@ -32,23 +32,14 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
     return allVoices.find(v => v.id === config.voice);
   }, [config.voice, allVoices]);
 
-  const baseVoiceData = useMemo(() => {
-    if (selectedVoiceData?.isCustom && selectedVoiceData.baseVoiceId) {
-        return AVAILABLE_VOICES.find(v => v.id === selectedVoiceData.baseVoiceId);
-    }
-    return selectedVoiceData?.isCustom ? null : selectedVoiceData;
-  }, [selectedVoiceData]);
-
-  // Calculate stability score (0-100)
+  // Calculate consistency/stability score (0-100) based on temperature
+  // Lower temperature = higher consistency
   const stabilityScore = useMemo(() => {
-    const hasSeed = config.seeds[0] > 0;
-    if (!hasSeed) return 0;
-    const tempImpact = (2 - config.temperature) / 2; // Lower temp = higher stability
-    return Math.round(tempImpact * 100);
-  }, [config.seeds, config.temperature]);
+    const tempImpact = (2 - config.temperature) / 1.5; // Scale relative to min 0.5
+    return Math.min(100, Math.round(tempImpact * 100));
+  }, [config.temperature]);
 
   const getStabilityLabel = () => {
-    if (config.seeds[0] <= 0) return { label: 'Random Persona', color: 'text-orange-400', bar: 'bg-orange-500' };
     if (stabilityScore > 80) return { label: 'Maximum Consistency', color: 'text-emerald-400', bar: 'bg-emerald-500' };
     if (stabilityScore > 50) return { label: 'Stable acting', color: 'text-cyan-400', bar: 'bg-cyan-500' };
     return { label: 'Creative / Varied', color: 'text-amber-400', bar: 'bg-amber-500' };
@@ -65,24 +56,6 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
     } finally {
       setIsPreviewing(false);
     }
-  };
-
-  const randomizeSeed = (index: number) => {
-    const newSeeds = [...config.seeds];
-    newSeeds[index] = Math.floor(Math.random() * 1000000);
-    onConfigChange({ ...config, seeds: newSeeds });
-  };
-
-  const randomizeAllSeeds = () => {
-    const newSeeds = Array.from({ length: 5 }, () => Math.floor(Math.random() * 1000000));
-    newSeeds[0] = Math.floor(Math.random() * 1000000);
-    onConfigChange({ ...config, seeds: newSeeds });
-  };
-
-  const handleSeedChange = (index: number, val: string) => {
-      const newSeeds = [...config.seeds];
-      newSeeds[index] = parseInt(val) || 0;
-      onConfigChange({ ...config, seeds: newSeeds });
   };
 
   return (
@@ -208,7 +181,7 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
                 ></div>
             </div>
             <p className="text-[9px] text-gray-500 mt-2 leading-tight">
-                * To keep the voice consistent across rounds: Use a fixed <b>Seed</b> and <b>Temperature &lt; 0.8</b>
+                * To keep the voice consistent across rounds: Use a lower <b>Temperature &lt; 0.8</b>
             </p>
         </div>
       </div>
@@ -225,34 +198,6 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
             placeholder="Describe the aesthetic..."
             className="w-full bg-gray-900/40 border border-gray-700 rounded-md p-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 resize-none"
           />
-      </div>
-
-      <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <span>Voice Seeds (Anchor)</span>
-                {config.seeds[0] > 0 && <span className="text-emerald-500 text-[10px] font-bold">LOCKED 🔒</span>}
-            </label>
-            <button 
-                onClick={randomizeAllSeeds}
-                className="text-[10px] bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-300 px-2 py-1 rounded border border-indigo-700/50 transition-colors"
-            >
-                Randomize 🎲
-            </button>
-          </div>
-          <div className="grid grid-cols-5 gap-2">
-            {[0, 1, 2, 3, 4].map(idx => (
-                <div key={idx} className="space-y-1">
-                    <input
-                        type="number"
-                        value={config.seeds[idx]}
-                        onChange={(e) => handleSeedChange(idx, e.target.value)}
-                        placeholder="0"
-                        className="w-full bg-gray-900 border border-gray-700 rounded p-1 text-xs text-center text-cyan-200 font-mono outline-none focus:border-cyan-500"
-                    />
-                </div>
-            ))}
-          </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

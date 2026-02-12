@@ -11,9 +11,7 @@ import type { DialogueLine, SpeakerConfig, Voice, TextModel } from './types';
 import { AVAILABLE_VOICES, EXAMPLE_SCRIPT, SPEEDS, EMOTIONS, TEXT_MODELS, DEFAULT_TONE } from './constants';
 import { CopyIcon, LoadingSpinner } from './components/icons';
 
-const APP_VERSION = "v1.9.36 (Header Update)";
-
-const INITIAL_DEFAULT_SEEDS = [428057, 428057, 428057, 428057, 428057];
+const APP_VERSION = "v1.9.37 (Remove Seeds)";
 
 const App: React.FC = () => {
   // --- ระบบจัดการ API Key สำหรับใช้งานส่วนตัว ---
@@ -85,13 +83,6 @@ const App: React.FC = () => {
     });
   }, [generatedStoryAudio, storyPlaybackSpeed, storyPlaybackVolume]);
 
-  const createDefaultSeeds = (baseOverride?: number) => {
-    if (baseOverride !== undefined) {
-      return [baseOverride, baseOverride + 1, baseOverride + 2, baseOverride + 3, baseOverride + 4];
-    }
-    return [...INITIAL_DEFAULT_SEEDS];
-  };
-
   useEffect(() => {
     setOnPlaybackStateChange(setIsPlaying);
     const savedScript = localStorage.getItem('tts-script');
@@ -129,17 +120,12 @@ const App: React.FC = () => {
         const parsedConfigs: [string, any][] = JSON.parse(savedConfigs);
         if (Array.isArray(parsedConfigs)) {
           const migratedConfigs = new Map<string, SpeakerConfig>(parsedConfigs.map(([speaker, config]) => {
-            let seeds = config.seeds;
-            if (!seeds || !Array.isArray(seeds)) {
-              seeds = createDefaultSeeds(config.seed);
-            }
             return [speaker, {
               voice: config.voice || AVAILABLE_VOICES[0].id,
               promptPrefix: config.promptPrefix || '',
               emotion: config.emotion || 'none',
               volume: config.volume || 1,
               speed: config.speed || 'normal', 
-              seeds: seeds,
               toneDescription: config.toneDescription || '',
               temperature: config.temperature !== undefined ? config.temperature : 0.7,
             }];
@@ -182,7 +168,6 @@ const App: React.FC = () => {
             emotion: 'none', 
             volume: 1, 
             speed: 'normal', 
-            seeds: createDefaultSeeds(voiceIndex === 0 ? undefined : (INITIAL_DEFAULT_SEEDS[0] + (voiceIndex * 10))),
             toneDescription: '',
             temperature: 0.7,
           });
@@ -242,7 +227,6 @@ const App: React.FC = () => {
         emotion: config.emotion,
         volume: config.volume,
         speed: config.speed,
-        seeds: config.seeds,
         toneDescription: combinedTone,
         temperature: config.temperature
       }]]);
@@ -291,7 +275,6 @@ const App: React.FC = () => {
           emotion: config.emotion,
           volume: config.volume,
           speed: config.speed,
-          seeds: config.seeds,
           toneDescription: combinedTone,
           temperature: config.temperature
         });
@@ -422,11 +405,10 @@ const App: React.FC = () => {
             onPreviewLine={(l) => {
               const config = speakerConfigs.get(l.speaker);
               if (!config) return Promise.resolve();
-              const seedToUse = config.seeds[0];
               const prefix = constructFullPrefix(config);
               const voiceInfo = allVoices.find(v => v.id === config.voice);
               const combinedTone = `${voiceInfo?.toneDescription || ''} ${config.toneDescription || ''}`.trim();
-              return generateSingleLineSpeech(`${prefix} ${l.text}`, config.voice, seedToUse, combinedTone, config.temperature).then(b => b && playAudio(b));
+              return generateSingleLineSpeech(`${prefix} ${l.text}`, config.voice, combinedTone, config.temperature).then(b => b && playAudio(b));
             }}
             onPreviewSpeaker={handlePreviewSpeaker}
             dialogueLines={dialogueLines} onGenerateFullStory={handleGenerateFullStory} isGenerating={isGenerating}
@@ -516,7 +498,6 @@ const App: React.FC = () => {
                     emotion: config.emotion,
                     volume: config.volume,
                     speed: config.speed,
-                    seeds: config.seeds,
                     toneDescription: '',
                     temperature: config.temperature
                   };
