@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import type { SpeakerConfig, Voice } from '../types';
-import { AVAILABLE_VOICES, EMOTIONS, SPEEDS } from '../constants';
+import { AVAILABLE_VOICES } from '../constants';
 import { PlayIcon, LoadingSpinner, VoiceCloneIcon, StopIcon } from './icons';
 
 interface SpeakerControlProps {
@@ -27,10 +27,6 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
 }) => {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const customVoices = allVoices.filter(v => v.isCustom);
-
-  const selectedVoiceData = useMemo(() => {
-    return allVoices.find(v => v.id === config.voice);
-  }, [config.voice, allVoices]);
 
   // Calculate consistency/stability score (0-100) based on temperature
   // Lower temperature = higher consistency
@@ -105,68 +101,33 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
       </div>
 
       <div className="flex flex-col gap-4 mb-4">
-        <div className="flex flex-col gap-4">
-          <div>
-            <label htmlFor={`voice-${speakerName}`} className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-              Voice Model
-            </label>
-            <select
-              id={`voice-${speakerName}`}
-              value={config.voice}
-              onChange={(e) => onConfigChange({ ...config, voice: e.target.value })}
-              className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <optgroup label="Pre-built Voices">
-                  {AVAILABLE_VOICES.map((voice: Voice) => (
-                  <option key={voice.id} value={voice.id}>
-                      {voice.name}
-                  </option>
-                  ))}
-              </optgroup>
-              {customVoices.length > 0 && (
-                  <optgroup label="Custom Voices">
-                      {customVoices.map((voice: Voice) => (
-                      <option key={voice.id} value={voice.id}>
-                          {voice.name} (Custom)
-                      </option>
-                      ))}
-                  </optgroup>
-              )}
-            </select>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor={`emotion-${speakerName}`} className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-                  Emotion
-                </label>
-                <select
-                  id={`emotion-${speakerName}`}
-                  value={config.emotion}
-                  onChange={(e) => onConfigChange({ ...config, emotion: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {EMOTIONS.map(emotion => (
-                    <option key={emotion.value} value={emotion.value}>{emotion.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor={`speed-${speakerName}`} className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-                  Speed
-                </label>
-                <select
-                  id={`speed-${speakerName}`}
-                  value={config.speed}
-                  onChange={(e) => onConfigChange({ ...config, speed: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {SPEEDS.map(speed => (
-                    <option key={speed.value} value={speed.value}>{speed.label}</option>
-                  ))}
-                </select>
-              </div>
-          </div>
+        <div>
+          <label htmlFor={`voice-${speakerName}`} className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+            Voice Model
+          </label>
+          <select
+            id={`voice-${speakerName}`}
+            value={config.voice}
+            onChange={(e) => onConfigChange({ ...config, voice: e.target.value })}
+            className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <optgroup label="Pre-built Voices">
+                {AVAILABLE_VOICES.map((voice: Voice) => (
+                <option key={voice.id} value={voice.id}>
+                    {voice.name}
+                </option>
+                ))}
+            </optgroup>
+            {customVoices.length > 0 && (
+                <optgroup label="Custom Voices">
+                    {customVoices.map((voice: Voice) => (
+                    <option key={voice.id} value={voice.id}>
+                        {voice.name} (Custom)
+                    </option>
+                    ))}
+                </optgroup>
+            )}
+          </select>
         </div>
 
         <div className="bg-black/30 p-3 rounded-lg border border-gray-700/50">
@@ -192,10 +153,10 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
           </label>
           <textarea
             id={`tone-${speakerName}`}
-            rows={2}
+            rows={3}
             value={config.toneDescription || ''}
             onChange={(e) => onConfigChange({ ...config, toneDescription: e.target.value })}
-            placeholder="Describe the aesthetic..."
+            placeholder="Describe the aesthetic (e.g., 'Speak calmly and slowly with wise pauses...')"
             className="w-full bg-gray-900/40 border border-gray-700 rounded-md p-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 resize-none"
           />
       </div>

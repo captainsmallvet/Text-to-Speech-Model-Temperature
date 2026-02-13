@@ -8,13 +8,12 @@ import Modal from './components/Modal';
 import { generateSingleLineSpeech, generateMultiLineSpeech, generateSeparateSpeakerSpeech, performTextReasoning } from './geminiService';
 import { playAudio, downloadAudio, setOnPlaybackStateChange, stopAudio } from './utils/audio';
 import type { DialogueLine, SpeakerConfig, Voice, TextModel } from './types';
-import { AVAILABLE_VOICES, EXAMPLE_SCRIPT, SPEEDS, EMOTIONS, TEXT_MODELS, DEFAULT_TONE } from './constants';
+import { AVAILABLE_VOICES, EXAMPLE_SCRIPT, TEXT_MODELS, DEFAULT_TONE } from './constants';
 import { CopyIcon, LoadingSpinner } from './components/icons';
 
-const APP_VERSION = "v1.9.37 (Remove Seeds)";
+const APP_VERSION = "v1.9.38 (Unified Description)";
 
 const App: React.FC = () => {
-  // --- ระบบจัดการ API Key สำหรับใช้งานส่วนตัว ---
   const [inputKey, setInputKey] = useState<string>('');
 
   useEffect(() => {
@@ -122,10 +121,7 @@ const App: React.FC = () => {
           const migratedConfigs = new Map<string, SpeakerConfig>(parsedConfigs.map(([speaker, config]) => {
             return [speaker, {
               voice: config.voice || AVAILABLE_VOICES[0].id,
-              promptPrefix: config.promptPrefix || '',
-              emotion: config.emotion || 'none',
               volume: config.volume || 1,
-              speed: config.speed || 'normal', 
               toneDescription: config.toneDescription || '',
               temperature: config.temperature !== undefined ? config.temperature : 0.7,
             }];
@@ -164,10 +160,7 @@ const App: React.FC = () => {
           const defaultVoice = AVAILABLE_VOICES[voiceIndex % AVAILABLE_VOICES.length];
           newConfigs.set(speaker, {
             voice: defaultVoice.id,
-            promptPrefix: '', 
-            emotion: 'none', 
             volume: 1, 
-            speed: 'normal', 
             toneDescription: '',
             temperature: 0.7,
           });
@@ -193,17 +186,6 @@ const App: React.FC = () => {
     showToast("Progress saved successfully!");
   };
 
-  const constructFullPrefix = (config: SpeakerConfig) => {
-    const speedAdverb = SPEEDS.find(s => s.value === config.speed)?.adverb ?? '';
-    const emotionDesc = config.emotion !== 'none' ? config.emotion : '';
-    if (!speedAdverb && !emotionDesc) return '';
-    let fullPrefix = 'Please speak ';
-    if (speedAdverb && emotionDesc) fullPrefix += `${speedAdverb} and ${emotionDesc}:`;
-    else if (speedAdverb) fullPrefix += `${speedAdverb}:`;
-    else if (emotionDesc) fullPrefix += `${emotionDesc}:`;
-    return fullPrefix;
-  };
-
   const handlePreviewSpeaker = async (speaker: string) => {
     const lines = dialogueLines.filter(l => l.speaker === speaker);
     if (lines.length === 0) return;
@@ -223,13 +205,10 @@ const App: React.FC = () => {
 
       const effectiveConfigs = new Map([[speaker, { 
         voice: voiceToUse, 
-        promptPrefix: constructFullPrefix(config),
-        emotion: config.emotion,
         volume: config.volume,
-        speed: config.speed,
         toneDescription: combinedTone,
         temperature: config.temperature
-      }]]);
+      } as any]]);
 
       const audioBlob = await generateMultiLineSpeech(
         lines, 
@@ -271,10 +250,7 @@ const App: React.FC = () => {
 
         effectiveSpeakerConfigs.set(line.speaker, { 
           voice: voiceToUse, 
-          promptPrefix: constructFullPrefix(config),
-          emotion: config.emotion,
           volume: config.volume,
-          speed: config.speed,
           toneDescription: combinedTone,
           temperature: config.temperature
         });
@@ -405,10 +381,9 @@ const App: React.FC = () => {
             onPreviewLine={(l) => {
               const config = speakerConfigs.get(l.speaker);
               if (!config) return Promise.resolve();
-              const prefix = constructFullPrefix(config);
               const voiceInfo = allVoices.find(v => v.id === config.voice);
               const combinedTone = `${voiceInfo?.toneDescription || ''} ${config.toneDescription || ''}`.trim();
-              return generateSingleLineSpeech(`${prefix} ${l.text}`, config.voice, combinedTone, config.temperature).then(b => b && playAudio(b));
+              return generateSingleLineSpeech(l.text, config.voice, combinedTone, config.temperature).then(b => b && playAudio(b));
             }}
             onPreviewSpeaker={handlePreviewSpeaker}
             dialogueLines={dialogueLines} onGenerateFullStory={handleGenerateFullStory} isGenerating={isGenerating}
@@ -494,10 +469,7 @@ const App: React.FC = () => {
                   const config = current as SpeakerConfig;
                   const updatedConfig: SpeakerConfig = {
                     voice: nv.id,
-                    promptPrefix: config.promptPrefix,
-                    emotion: config.emotion,
                     volume: config.volume,
-                    speed: config.speed,
                     toneDescription: '',
                     temperature: config.temperature
                   };

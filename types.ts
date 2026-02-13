@@ -7,13 +7,9 @@ export interface DialogueLine {
 
 export interface SpeakerConfig {
   voice: string;
-  // This will be used to add prefixes like "Say cheerfully:" to the text for emotional tone.
-  promptPrefix: string; 
-  emotion: string;
   volume: number;
-  speed: string;
   toneDescription: string;
-  temperature: number; // Added temperature for speech variability
+  temperature: number;
 }
 
 export interface Voice {

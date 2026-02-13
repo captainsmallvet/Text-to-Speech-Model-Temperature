@@ -48,26 +48,6 @@ export const TEXT_MODELS: TextModel[] = [
   { id: 'gemini-flash-lite-latest', name: 'Gemini Flash Lite', description: 'Lightweight and extremely fast' },
 ];
 
-export const EMOTIONS = [
-  { value: 'none', label: 'Default / None' },
-  { value: 'happily', label: 'Happy' },
-  { value: 'cheerfully', label: 'Cheerful' },
-  { value: 'calmly', label: 'Calm' },
-  { value: 'seriously', label: 'Serious' },
-  { value: 'with a very serene, wise tone, reflecting on deep truths with peaceful pauses', label: 'Dhamma: Deep Reflection' },
-  { value: 'with profound kindness and compassionate energy, speaking slowly and gently', label: 'Dhamma: Compassionate Guidance' },
-  { value: 'in a steady, meditative flow, maintaining perfect equanimity in every word', label: 'Dhamma: Meditative Flow' },
-  { value: 'with a soft, airy whisper-like quality to induce deep relaxation and focus', label: 'Dhamma: Peaceful Stillness' },
-  { value: 'articulating every syllable clearly and mindfully, like a teacher explaining the path', label: 'Dhamma: Mindful Clarity' },
-];
-
-export const SPEEDS = [
-  { value: 'slow', label: 'Slow (Best for Dhamma)', adverb: 'slowly' },
-  { value: 'slightly_slow', label: 'Comfortable', adverb: 'at a comfortable, relaxed pace' },
-  { value: 'normal', label: 'Normal', adverb: '' },
-  { value: 'slightly_fast', label: 'Slightly Fast', adverb: 'somewhat quickly' },
-];
-
 export const EXAMPLE_SCRIPT = `Struggling with a chaotic mind??? This isn't just ancient wisdom; it's the Buddha's precise, step-by-step path to ending suffering and finding unshakeable inner peace, starting today.
 Hello and welcome.
 Today we're diving into the Buddhist path to inner peace.
