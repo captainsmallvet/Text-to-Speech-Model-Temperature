@@ -10,15 +10,14 @@ export interface SpeakerConfig {
   volume: number;
   toneDescription: string;
   temperature: number;
+  seed: number; // The key to deterministic voice generation
 }
 
 export interface Voice {
   name: string;
   id: string;
   isCustom?: boolean;
-  // Which pre-built voice to use for playback of custom voices
   baseVoiceId?: string; 
-  // Recommended tone description found during analysis
   toneDescription?: string;
 }
 
@@ -28,7 +27,6 @@ export interface TextModel {
   description: string;
 }
 
-// Added VoiceName enum to satisfy dependencies in VoiceSelector
 export enum VoiceName {
   Kore = 'Kore',
   Puck = 'Puck',

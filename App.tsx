@@ -11,7 +11,7 @@ import type { DialogueLine, SpeakerConfig, Voice, TextModel } from './types';
 import { AVAILABLE_VOICES, EXAMPLE_SCRIPT, TEXT_MODELS, DEFAULT_TONE } from './constants';
 import { CopyIcon, LoadingSpinner } from './components/icons';
 
-const APP_VERSION = "v1.9.38 (Unified Description)";
+const APP_VERSION = "v1.9.39 (Consistency Fix)";
 
 const App: React.FC = () => {
   const [inputKey, setInputKey] = useState<string>('');
@@ -124,6 +124,7 @@ const App: React.FC = () => {
               volume: config.volume || 1,
               toneDescription: config.toneDescription || '',
               temperature: config.temperature !== undefined ? config.temperature : 0.7,
+              seed: config.seed || Math.floor(Math.random() * 1000000)
             }];
           }));
           setSpeakerConfigs(migratedConfigs);
@@ -163,6 +164,7 @@ const App: React.FC = () => {
             volume: 1, 
             toneDescription: '',
             temperature: 0.7,
+            seed: 428057 + (voiceIndex * 100)
           });
         }
         voiceIndex++;
@@ -207,8 +209,9 @@ const App: React.FC = () => {
         voice: voiceToUse, 
         volume: config.volume,
         toneDescription: combinedTone,
-        temperature: config.temperature
-      } as any]]);
+        temperature: config.temperature,
+        seed: config.seed
+      }]]);
 
       const audioBlob = await generateMultiLineSpeech(
         lines, 
@@ -252,7 +255,8 @@ const App: React.FC = () => {
           voice: voiceToUse, 
           volume: config.volume,
           toneDescription: combinedTone,
-          temperature: config.temperature
+          temperature: config.temperature,
+          seed: config.seed
         });
       }
     }
@@ -383,7 +387,7 @@ const App: React.FC = () => {
               if (!config) return Promise.resolve();
               const voiceInfo = allVoices.find(v => v.id === config.voice);
               const combinedTone = `${voiceInfo?.toneDescription || ''} ${config.toneDescription || ''}`.trim();
-              return generateSingleLineSpeech(l.text, config.voice, combinedTone, config.temperature).then(b => b && playAudio(b));
+              return generateSingleLineSpeech(l.text, config.voice, combinedTone, config.temperature, config.seed).then(b => b && playAudio(b));
             }}
             onPreviewSpeaker={handlePreviewSpeaker}
             dialogueLines={dialogueLines} onGenerateFullStory={handleGenerateFullStory} isGenerating={isGenerating}
@@ -471,7 +475,8 @@ const App: React.FC = () => {
                     voice: nv.id,
                     volume: config.volume,
                     toneDescription: '',
-                    temperature: config.temperature
+                    temperature: config.temperature,
+                    seed: config.seed
                   };
                   next.set(activeSpeakerForClone, updatedConfig);
                 }

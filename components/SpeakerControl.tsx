@@ -28,10 +28,9 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
   const [isPreviewing, setIsPreviewing] = useState(false);
   const customVoices = allVoices.filter(v => v.isCustom);
 
-  // Calculate consistency/stability score (0-100) based on temperature
-  // Lower temperature = higher consistency
+  // Consistency score depends on BOTH seed being set and low temperature
   const stabilityScore = useMemo(() => {
-    const tempImpact = (2 - config.temperature) / 1.5; // Scale relative to min 0.5
+    const tempImpact = (2 - config.temperature) / 1.5; 
     return Math.min(100, Math.round(tempImpact * 100));
   }, [config.temperature]);
 
@@ -52,6 +51,10 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
     } finally {
       setIsPreviewing(false);
     }
+  };
+
+  const randomizeSeed = () => {
+    onConfigChange({ ...config, seed: Math.floor(Math.random() * 1000000) });
   };
 
   return (
@@ -101,33 +104,51 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
       </div>
 
       <div className="flex flex-col gap-4 mb-4">
-        <div>
-          <label htmlFor={`voice-${speakerName}`} className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-            Voice Model
-          </label>
-          <select
-            id={`voice-${speakerName}`}
-            value={config.voice}
-            onChange={(e) => onConfigChange({ ...config, voice: e.target.value })}
-            className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <optgroup label="Pre-built Voices">
-                {AVAILABLE_VOICES.map((voice: Voice) => (
-                <option key={voice.id} value={voice.id}>
-                    {voice.name}
-                </option>
-                ))}
-            </optgroup>
-            {customVoices.length > 0 && (
-                <optgroup label="Custom Voices">
-                    {customVoices.map((voice: Voice) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor={`voice-${speakerName}`} className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+                Voice Model
+              </label>
+              <select
+                id={`voice-${speakerName}`}
+                value={config.voice}
+                onChange={(e) => onConfigChange({ ...config, voice: e.target.value })}
+                className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <optgroup label="Pre-built Voices">
+                    {AVAILABLE_VOICES.map((voice: Voice) => (
                     <option key={voice.id} value={voice.id}>
-                        {voice.name} (Custom)
+                        {voice.name}
                     </option>
                     ))}
                 </optgroup>
-            )}
-          </select>
+                {customVoices.length > 0 && (
+                    <optgroup label="Custom Voices">
+                        {customVoices.map((voice: Voice) => (
+                        <option key={voice.id} value={voice.id}>
+                            {voice.name} (Custom)
+                        </option>
+                        ))}
+                    </optgroup>
+                )}
+              </select>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label htmlFor={`seed-${speakerName}`} className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                  Voice DNA (Seed)
+                </label>
+                <button onClick={randomizeSeed} className="text-[10px] text-indigo-400 hover:text-indigo-300">New DNA 🎲</button>
+              </div>
+              <input
+                id={`seed-${speakerName}`}
+                type="number"
+                value={config.seed}
+                onChange={(e) => onConfigChange({ ...config, seed: parseInt(e.target.value) || 0 })}
+                className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm text-indigo-300 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
         </div>
 
         <div className="bg-black/30 p-3 rounded-lg border border-gray-700/50">
@@ -142,7 +163,7 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
                 ></div>
             </div>
             <p className="text-[9px] text-gray-500 mt-2 leading-tight">
-                * To keep the voice consistent across rounds: Use a lower <b>Temperature &lt; 0.8</b>
+                * To fix voice across batches: Lock the <b>Voice DNA</b> and use <b>Temperature &lt; 0.8</b>
             </p>
         </div>
       </div>
@@ -153,10 +174,10 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
           </label>
           <textarea
             id={`tone-${speakerName}`}
-            rows={3}
+            rows={2}
             value={config.toneDescription || ''}
             onChange={(e) => onConfigChange({ ...config, toneDescription: e.target.value })}
-            placeholder="Describe the aesthetic (e.g., 'Speak calmly and slowly with wise pauses...')"
+            placeholder="Describe the aesthetic (e.g., 'Speak calmly and slowly...')"
             className="w-full bg-gray-900/40 border border-gray-700 rounded-md p-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 resize-none"
           />
       </div>
@@ -179,7 +200,7 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
             </div>
             <div>
                 <label htmlFor={`temp-${speakerName}`} className="block text-xs font-medium text-gray-400 mb-1">
-                    Temperature: <span className="font-mono text-amber-400">{Number(config.temperature).toFixed(1)}</span> <span className="text-[9px] text-gray-500">(min 0.5)</span>
+                    Temperature: <span className="font-mono text-amber-400">{Number(config.temperature).toFixed(1)}</span>
                 </label>
                 <input
                     type="range"
