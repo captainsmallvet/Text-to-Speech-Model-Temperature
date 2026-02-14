@@ -5,13 +5,13 @@ import VoiceSettings from './components/VoiceSettings';
 import VoiceCloneModal from './components/VoiceCloneModal';
 import VoiceLibraryModal from './components/VoiceLibraryModal';
 import Modal from './components/Modal';
-import { generateSingleLineSpeech, generateMultiLineSpeech, generateSeparateSpeakerSpeech, performTextReasoning } from './geminiService';
+import { generateSingleLineSpeech, generateMultiLineSpeech, generateSeparateSpeakerSpeech, performTextReasoning } from './services/geminiService';
 import { playAudio, downloadAudio, setOnPlaybackStateChange, stopAudio } from './utils/audio';
 import type { DialogueLine, SpeakerConfig, Voice, TextModel } from './types';
-import { AVAILABLE_VOICES, EXAMPLE_SCRIPT, TEXT_MODELS, DEFAULT_TONE } from './constants';
+import { AVAILABLE_VOICES, EXAMPLE_SCRIPT, TEXT_MODELS, TTS_MODELS, DEFAULT_TONE } from './constants';
 import { CopyIcon, LoadingSpinner } from './components/icons';
 
-const APP_VERSION = "v1.9.39 (Consistency Fix)";
+const APP_VERSION = "v1.9.41 (Pro TTS Added)";
 
 const App: React.FC = () => {
   const [inputKey, setInputKey] = useState<string>('');
@@ -56,7 +56,11 @@ const App: React.FC = () => {
   const [activeSpeakerForClone, setActiveSpeakerForClone] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [statusCopySuccess, setStatusCopySuccess] = useState(false);
+  
+  // Model States
   const [textModelId, setTextModelId] = useState<string>(TEXT_MODELS[0].id);
+  const [ttsModelId, setTtsModelId] = useState<string>(TTS_MODELS[0].id);
+
   const [maxCharsPerBatch, setMaxCharsPerBatch] = useState<number>(1900);
   const [interBatchDelay, setInterBatchDelay] = useState<number>(120);
 
@@ -87,7 +91,10 @@ const App: React.FC = () => {
     const savedScript = localStorage.getItem('tts-script');
     const savedConfigs = localStorage.getItem('tts-speakerConfigs');
     const savedCustomVoices = localStorage.getItem('tts-customVoices');
+    
     const savedTextModelId = localStorage.getItem('tts-textModelId');
+    const savedTtsModelId = localStorage.getItem('tts-ttsModelId');
+
     const savedMaxChars = localStorage.getItem('tts-maxCharsPerBatch');
     const savedDelay = localStorage.getItem('tts-interBatchDelay');
 
@@ -95,6 +102,8 @@ const App: React.FC = () => {
     else setScriptText(EXAMPLE_SCRIPT);
     
     if (savedTextModelId) setTextModelId(savedTextModelId);
+    if (savedTtsModelId) setTtsModelId(savedTtsModelId);
+
     if (savedMaxChars) setMaxCharsPerBatch(parseInt(savedMaxChars) || 1900);
     if (savedDelay) setInterBatchDelay(parseInt(savedDelay) || 120);
 
@@ -183,6 +192,7 @@ const App: React.FC = () => {
     localStorage.setItem('tts-speakerConfigs', JSON.stringify(Array.from(speakerConfigs.entries())));
     localStorage.setItem('tts-customVoices', JSON.stringify(customVoices));
     localStorage.setItem('tts-textModelId', textModelId);
+    localStorage.setItem('tts-ttsModelId', ttsModelId);
     localStorage.setItem('tts-maxCharsPerBatch', maxCharsPerBatch.toString());
     localStorage.setItem('tts-interBatchDelay', interBatchDelay.toString());
     showToast("Progress saved successfully!");
@@ -216,6 +226,7 @@ const App: React.FC = () => {
       const audioBlob = await generateMultiLineSpeech(
         lines, 
         effectiveConfigs, 
+        ttsModelId,
         (msg) => setGenerationStatus(msg), 
         () => isAbortingRef.current, 
         maxCharsPerBatch, 
@@ -264,14 +275,14 @@ const App: React.FC = () => {
     try {
       const checkAborted = () => isAbortingRef.current;
       if (generationMode === 'combined') {
-        const audioBlob = await generateMultiLineSpeech(dialogueLines, effectiveSpeakerConfigs, (msg) => setGenerationStatus(msg), checkAborted, maxCharsPerBatch, interBatchDelay);
+        const audioBlob = await generateMultiLineSpeech(dialogueLines, effectiveSpeakerConfigs, ttsModelId, (msg) => setGenerationStatus(msg), checkAborted, maxCharsPerBatch, interBatchDelay);
         if (audioBlob) {
           setGeneratedStoryAudio(audioBlob);
           if (isAbortingRef.current) showToast("Stopped! Partial audio saved.");
           else showToast("Full audio generated!");
         }
       } else {
-        const speakerAudioMap = await generateSeparateSpeakerSpeech(dialogueLines, effectiveSpeakerConfigs, (msg) => setGenerationStatus(msg), checkAborted, maxCharsPerBatch, interBatchDelay);
+        const speakerAudioMap = await generateSeparateSpeakerSpeech(dialogueLines, effectiveSpeakerConfigs, ttsModelId, (msg) => setGenerationStatus(msg), checkAborted, maxCharsPerBatch, interBatchDelay);
         if (speakerAudioMap && speakerAudioMap.size > 0) {
           setGeneratedSpeakerAudio(speakerAudioMap);
           if (isAbortingRef.current) showToast("Stopped! Partial speaker files saved.");
@@ -362,16 +373,31 @@ const App: React.FC = () => {
             Text-to-Speech Model Temperature
           </h1>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-6 text-xs">
+            {/* Text Writer Model Selection */}
             <div className="flex items-center gap-2 bg-gray-900/50 p-2 rounded-lg border border-gray-800">
-              <label className="font-bold text-emerald-500 uppercase tracking-widest whitespace-nowrap">Model:</label>
+              <label className="font-bold text-emerald-500 uppercase tracking-widest whitespace-nowrap">AI Writer:</label>
               <select
-                value={textModelId} onChange={(e) => { setTextModelId(e.target.value); localStorage.setItem('tts-textModelId', e.target.value); }}
-                className="bg-gray-800 text-white border-none rounded p-1 outline-none"
+                value={textModelId} 
+                onChange={(e) => { setTextModelId(e.target.value); localStorage.setItem('tts-textModelId', e.target.value); }}
+                className="bg-gray-800 text-white border-none rounded p-1 outline-none max-w-[150px]"
               >
                 {TEXT_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
             </div>
-            <p className="text-gray-500 font-mono">{APP_VERSION} | Neural Voice Engine</p>
+
+            {/* TTS Audio Model Selection */}
+             <div className="flex items-center gap-2 bg-gray-900/50 p-2 rounded-lg border border-gray-800">
+              <label className="font-bold text-cyan-500 uppercase tracking-widest whitespace-nowrap">TTS Model:</label>
+              <select
+                value={ttsModelId} 
+                onChange={(e) => { setTtsModelId(e.target.value); localStorage.setItem('tts-ttsModelId', e.target.value); }}
+                className="bg-gray-800 text-white border-none rounded p-1 outline-none max-w-[220px]"
+              >
+                {TTS_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+
+            <p className="text-gray-500 font-mono pl-2 border-l border-gray-700">{APP_VERSION}</p>
           </div>
         </header>
 
@@ -387,7 +413,7 @@ const App: React.FC = () => {
               if (!config) return Promise.resolve();
               const voiceInfo = allVoices.find(v => v.id === config.voice);
               const combinedTone = `${voiceInfo?.toneDescription || ''} ${config.toneDescription || ''}`.trim();
-              return generateSingleLineSpeech(l.text, config.voice, combinedTone, config.temperature, config.seed).then(b => b && playAudio(b));
+              return generateSingleLineSpeech(l.text, config.voice, ttsModelId, config.seed, combinedTone, config.temperature).then(b => b && playAudio(b));
             }}
             onPreviewSpeaker={handlePreviewSpeaker}
             dialogueLines={dialogueLines} onGenerateFullStory={handleGenerateFullStory} isGenerating={isGenerating}
@@ -485,7 +511,7 @@ const App: React.FC = () => {
             }
             setIsCloneModalOpen(false); 
           }}
-          onPreview={async (v) => generateSingleLineSpeech(`Voice DNA analyzed. ${v.toneDescription || ''}`, v.baseVoiceId!).then(b => b && playAudio(b))}
+          onPreview={async (v) => generateSingleLineSpeech(`Voice DNA analyzed. ${v.toneDescription || ''}`, v.baseVoiceId!, ttsModelId).then(b => b && playAudio(b))}
           speakerName={activeSpeakerForClone}
         />
       )}
@@ -494,7 +520,7 @@ const App: React.FC = () => {
         <VoiceLibraryModal
           onClose={() => setIsLibraryModalOpen(false)} customVoices={customVoices}
           onUpdate={(u) => { setCustomVoices(u); localStorage.setItem('tts-customVoices', JSON.stringify(u)); }}
-          onPreview={async (v) => generateSingleLineSpeech(`Previewing voice ${v.name}. ${v.toneDescription || ''}`, v.baseVoiceId!).then(b => b && playAudio(b))}
+          onPreview={async (v) => generateSingleLineSpeech(`Previewing voice ${v.name}. ${v.toneDescription || ''}`, v.baseVoiceId!, ttsModelId).then(b => b && playAudio(b))}
         />
       )}
 

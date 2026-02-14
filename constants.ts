@@ -48,6 +48,13 @@ export const TEXT_MODELS: TextModel[] = [
   { id: 'gemini-flash-lite-latest', name: 'Gemini Flash Lite', description: 'Lightweight and extremely fast' },
 ];
 
+export const TTS_MODELS: TextModel[] = [
+  { id: 'gemini-2.5-flash-preview-tts', name: 'Gemini 2.5 Flash TTS (Recommended)', description: 'Specialized for high-fidelity speech & consistency' },
+  { id: 'gemini-2.5-pro-preview-tts', name: 'Gemini 2.5 Pro TTS (Premium)', description: 'Optimized for powerful, low-latency natural speech' },
+  { id: 'gemini-2.5-flash-latest', name: 'Gemini 2.5 Flash (General)', description: 'Multimodal model, good for casual conversation' },
+  { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro (Experimental)', description: 'High-intelligence multimodal model with audio capabilities' },
+];
+
 export const EXAMPLE_SCRIPT = `Struggling with a chaotic mind??? This isn't just ancient wisdom; it's the Buddha's precise, step-by-step path to ending suffering and finding unshakeable inner peace, starting today.
 Hello and welcome.
 Today we're diving into the Buddhist path to inner peace.

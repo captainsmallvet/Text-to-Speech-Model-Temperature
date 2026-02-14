@@ -46,9 +46,10 @@ const splitTextSafely = (text: string, maxLength: number): string[] => {
 const callGeminiTTS = async (
     text: string, 
     voice: string, 
+    modelId: string,
+    seed?: number, 
     tone?: string,
     temperature: number = 0.7,
-    seed: number = 42, // Default seed
     attempt: number = 1,
     onStatusUpdate?: (msg: string) => void,
     checkAborted?: () => boolean,
@@ -60,18 +61,18 @@ const callGeminiTTS = async (
     try {
         const toneToUse = (tone !== undefined) ? tone : DEFAULT_TONE;
         
-        // Improved prompt for consistency: explicitly tell the model to maintain the persona
+        // Improved prompt for consistency
         const finalPrompt = toneToUse.trim() 
             ? `[STRICT VOICE PERSONA: ${toneToUse.trim()}] Text to speak: ${text}` 
             : text;
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-preview-tts",
+            model: modelId,
             contents: finalPrompt,
             config: {
                 responseModalities: [Modality.AUDIO],
                 temperature: temperature,
-                seed: seed, // CRITICAL: This ensures Batch A starts with the same voice as Batch B
+                seed: seed,
                 speechConfig: {
                     voiceConfig: {
                         prebuiltVoiceConfig: { voiceName: voice },
@@ -104,13 +105,13 @@ const callGeminiTTS = async (
                 await delay(1000);
             }
             
-            return callGeminiTTS(text, voice, tone, temperature, seed, attempt, onStatusUpdate, checkAborted, progressLabel);
+            return callGeminiTTS(text, voice, modelId, seed, tone, temperature, attempt, onStatusUpdate, checkAborted, progressLabel);
         }
 
         if (attempt <= 3 && (errorMsg.includes("500") || errorMsg.includes("Internal Error"))) {
             if (onStatusUpdate) onStatusUpdate(`${progressLabel}\n\n⚠️ Server ขัดข้อง... กำลังลองใหม่รอบที่ ${attempt}/3`);
             await delay(attempt * 2000);
-            return callGeminiTTS(text, voice, tone, temperature, seed, attempt + 1, onStatusUpdate, checkAborted, progressLabel);
+            return callGeminiTTS(text, voice, modelId, seed, tone, temperature, attempt + 1, onStatusUpdate, checkAborted, progressLabel);
         }
 
         throw error;
@@ -139,8 +140,8 @@ const handleInterBatchWait = async (
     }
 };
 
-export const generateSingleLineSpeech = async (text: string, voice: string, tone?: string, temperature: number = 0.7, seed: number = 42): Promise<Blob | null> => {
-    const pcmData = await callGeminiTTS(text, voice, tone, temperature, seed);
+export const generateSingleLineSpeech = async (text: string, voice: string, modelId: string, seed?: number, tone?: string, temperature: number = 0.7): Promise<Blob | null> => {
+    const pcmData = await callGeminiTTS(text, voice, modelId, seed, tone, temperature);
     if (pcmData) return createWavBlob([pcmData]);
     return null;
 };
@@ -148,6 +149,7 @@ export const generateSingleLineSpeech = async (text: string, voice: string, tone
 export const generateMultiLineSpeech = async (
   dialogueLines: DialogueLine[],
   speakerConfigs: Map<string, SpeakerConfig>,
+  modelId: string,
   onStatusUpdate?: (msg: string) => void,
   checkAborted?: () => boolean,
   maxCharsPerBatch: number = 3000,
@@ -160,6 +162,7 @@ export const generateMultiLineSpeech = async (
     const totalChars = dialogueLines.reduce((acc, l) => acc + l.text.length, 0);
     let processedChars = 0;
     
+    // Create batches
     const batches: {text: string, speaker: string}[] = [];
     let tempSpeaker: string | null = null;
     let tempText = "";
@@ -195,8 +198,7 @@ export const generateMultiLineSpeech = async (
             const snippet = batch.text.length > 50 ? batch.text.substring(0, 50) + "..." : batch.text;
             const progressLabel = `✅ งานที่เสร็จแล้ว: ${percent}%\n🔊 กำลังพากย์: ${batch.speaker}\n📄 ข้อความปัจจุบัน: "${snippet}"`;
             
-            // Pass the seed to each call
-            const pcm = await callGeminiTTS(batch.text, config.voice, config.toneDescription, config.temperature, config.seed, 1, onStatusUpdate, checkAborted, progressLabel);
+            const pcm = await callGeminiTTS(batch.text, config.voice, modelId, config.seed, config.toneDescription, config.temperature, 1, onStatusUpdate, checkAborted, progressLabel);
             if (pcm) {
                 audioChunks.push(pcm);
                 processedChars += batch.text.length;
@@ -219,6 +221,7 @@ export const generateMultiLineSpeech = async (
 export const generateSeparateSpeakerSpeech = async (
   dialogueLines: DialogueLine[],
   speakerConfigs: Map<string, SpeakerConfig>,
+  modelId: string,
   onStatusUpdate?: (msg: string) => void,
   checkAborted?: () => boolean,
   maxCharsPerBatch: number = 3000,
@@ -270,7 +273,7 @@ export const generateSeparateSpeakerSpeech = async (
           const snippet = batchText.length > 50 ? batchText.substring(0, 50) + "..." : batchText;
           const progressLabel = `📂 สร้างไฟล์แยก: ${speaker}\n📄 ข้อความปัจจุบัน: "${snippet}"`;
           
-          const pcm = await callGeminiTTS(batchText, config.voice, config.toneDescription, config.temperature, config.seed, 1, onStatusUpdate, checkAborted, progressLabel);
+          const pcm = await callGeminiTTS(batchText, config.voice, modelId, config.seed, config.toneDescription, config.temperature, 1, onStatusUpdate, checkAborted, progressLabel);
           if (pcm) {
               audioChunks.push(pcm);
               if (!isLastBatchOverall) {

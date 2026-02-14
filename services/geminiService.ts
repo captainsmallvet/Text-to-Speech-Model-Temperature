@@ -1,17 +1,14 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
-import type { DialogueLine, SpeakerConfig } from './types';
-import { decode, createWavBlob } from './utils/audio';
-import { DEFAULT_TONE } from './constants';
+import type { DialogueLine, SpeakerConfig } from '../types';
+import { decode, createWavBlob } from '../utils/audio';
+import { DEFAULT_TONE } from '../constants';
 
-// Fix: Use process.env.API_KEY exclusively for initialization as per guidelines
-// ลบของเก่า: const getAi = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
-// วางของใหม่นี้ลงไปแทน:
 const getAi = () => {
   const savedKey = localStorage.getItem('gemini_api_key');
-    const apiKey = savedKey || (window as any).process?.env?.API_KEY || "";
-      return new GoogleGenAI({ apiKey });
-      };
+  const apiKey = savedKey || (window as any).process?.env?.API_KEY || "";
+  return new GoogleGenAI({ apiKey });
+};
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -49,9 +46,10 @@ const splitTextSafely = (text: string, maxLength: number): string[] => {
 const callGeminiTTS = async (
     text: string, 
     voice: string, 
+    modelId: string,
     seed?: number, 
     tone?: string,
-    temperature: number = 1.0,
+    temperature: number = 0.7,
     attempt: number = 1,
     onStatusUpdate?: (msg: string) => void,
     checkAborted?: () => boolean,
@@ -63,20 +61,18 @@ const callGeminiTTS = async (
     try {
         const toneToUse = (tone !== undefined) ? tone : DEFAULT_TONE;
         
-        // Construct prompt: Use more prescriptive anchoring for consistency
-        // By adding "Regardless of text length, strictly maintain this specific voice persona", 
-        // we prompt the model to prioritize the seed's profile over the local text context.
+        // Improved prompt for consistency
         const finalPrompt = toneToUse.trim() 
-            ? `Regardless of text length or context, strictly maintain this specific voice persona: ${toneToUse.trim()}. Text to speak: ${text}` 
+            ? `[STRICT VOICE PERSONA: ${toneToUse.trim()}] Text to speak: ${text}` 
             : text;
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-preview-tts",
-            contents: [{ parts: [{ text: finalPrompt }] }],
+            model: modelId,
+            contents: finalPrompt,
             config: {
                 responseModalities: [Modality.AUDIO],
-                seed: seed,
                 temperature: temperature,
+                seed: seed,
                 speechConfig: {
                     voiceConfig: {
                         prebuiltVoiceConfig: { voiceName: voice },
@@ -109,13 +105,13 @@ const callGeminiTTS = async (
                 await delay(1000);
             }
             
-            return callGeminiTTS(text, voice, seed, tone, temperature, attempt, onStatusUpdate, checkAborted, progressLabel);
+            return callGeminiTTS(text, voice, modelId, seed, tone, temperature, attempt, onStatusUpdate, checkAborted, progressLabel);
         }
 
         if (attempt <= 3 && (errorMsg.includes("500") || errorMsg.includes("Internal Error"))) {
             if (onStatusUpdate) onStatusUpdate(`${progressLabel}\n\n⚠️ Server ขัดข้อง... กำลังลองใหม่รอบที่ ${attempt}/3`);
             await delay(attempt * 2000);
-            return callGeminiTTS(text, voice, seed, tone, temperature, attempt + 1, onStatusUpdate, checkAborted, progressLabel);
+            return callGeminiTTS(text, voice, modelId, seed, tone, temperature, attempt + 1, onStatusUpdate, checkAborted, progressLabel);
         }
 
         throw error;
@@ -144,8 +140,8 @@ const handleInterBatchWait = async (
     }
 };
 
-export const generateSingleLineSpeech = async (text: string, voice: string, seed?: number, tone?: string, temperature: number = 1.0): Promise<Blob | null> => {
-    const pcmData = await callGeminiTTS(text, voice, seed, tone, temperature);
+export const generateSingleLineSpeech = async (text: string, voice: string, modelId: string, seed?: number, tone?: string, temperature: number = 0.7): Promise<Blob | null> => {
+    const pcmData = await callGeminiTTS(text, voice, modelId, seed, tone, temperature);
     if (pcmData) return createWavBlob([pcmData]);
     return null;
 };
@@ -153,6 +149,7 @@ export const generateSingleLineSpeech = async (text: string, voice: string, seed
 export const generateMultiLineSpeech = async (
   dialogueLines: DialogueLine[],
   speakerConfigs: Map<string, SpeakerConfig>,
+  modelId: string,
   onStatusUpdate?: (msg: string) => void,
   checkAborted?: () => boolean,
   maxCharsPerBatch: number = 3000,
@@ -160,7 +157,6 @@ export const generateMultiLineSpeech = async (
 ): Promise<Blob | null> => {
   if (dialogueLines.length === 0) return null;
   const audioChunks: Uint8Array[] = [];
-  const speakerSeedIndices = new Map<string, number>();
 
   try {
     const totalChars = dialogueLines.reduce((acc, l) => acc + l.text.length, 0);
@@ -198,15 +194,11 @@ export const generateMultiLineSpeech = async (
         
         const config = speakerConfigs.get(batch.speaker);
         if (config) {
-            const seedIdx = speakerSeedIndices.get(batch.speaker) || 0;
-            const seedToUse = config.seeds[seedIdx % 5];
-            speakerSeedIndices.set(batch.speaker, seedIdx + 1);
-
             const percent = Math.round((processedChars / totalChars) * 100);
             const snippet = batch.text.length > 50 ? batch.text.substring(0, 50) + "..." : batch.text;
             const progressLabel = `✅ งานที่เสร็จแล้ว: ${percent}%\n🔊 กำลังพากย์: ${batch.speaker}\n📄 ข้อความปัจจุบัน: "${snippet}"`;
             
-            const pcm = await callGeminiTTS(batch.text, config.voice, seedToUse, config.toneDescription, config.temperature, 1, onStatusUpdate, checkAborted, progressLabel);
+            const pcm = await callGeminiTTS(batch.text, config.voice, modelId, config.seed, config.toneDescription, config.temperature, 1, onStatusUpdate, checkAborted, progressLabel);
             if (pcm) {
                 audioChunks.push(pcm);
                 processedChars += batch.text.length;
@@ -229,6 +221,7 @@ export const generateMultiLineSpeech = async (
 export const generateSeparateSpeakerSpeech = async (
   dialogueLines: DialogueLine[],
   speakerConfigs: Map<string, SpeakerConfig>,
+  modelId: string,
   onStatusUpdate?: (msg: string) => void,
   checkAborted?: () => boolean,
   maxCharsPerBatch: number = 3000,
@@ -268,8 +261,6 @@ export const generateSeparateSpeakerSpeech = async (
           const batchText = speakerBatches[bIdx];
           const isLastBatchOverall = (sIdx === speakers.length - 1) && (bIdx === speakerBatches.length - 1);
           
-          const seedToUse = config.seeds[bIdx % 5];
-
           let nextSnippet = "เปลี่ยนตัวละครถัดไป...";
           if (bIdx < speakerBatches.length - 1) {
               nextSnippet = speakerBatches[bIdx+1].substring(0, 50) + "...";
@@ -282,7 +273,7 @@ export const generateSeparateSpeakerSpeech = async (
           const snippet = batchText.length > 50 ? batchText.substring(0, 50) + "..." : batchText;
           const progressLabel = `📂 สร้างไฟล์แยก: ${speaker}\n📄 ข้อความปัจจุบัน: "${snippet}"`;
           
-          const pcm = await callGeminiTTS(batchText, config.voice, seedToUse, config.toneDescription, config.temperature, 1, onStatusUpdate, checkAborted, progressLabel);
+          const pcm = await callGeminiTTS(batchText, config.voice, modelId, config.seed, config.toneDescription, config.temperature, 1, onStatusUpdate, checkAborted, progressLabel);
           if (pcm) {
               audioChunks.push(pcm);
               if (!isLastBatchOverall) {
