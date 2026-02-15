@@ -49,7 +49,7 @@ const callGeminiTTS = async (
     modelId: string,
     seed?: number, 
     tone?: string,
-    temperature: number = 0.7,
+    temperature: number = 0.8,
     attempt: number = 1,
     onStatusUpdate?: (msg: string) => void,
     checkAborted?: () => boolean,
@@ -140,7 +140,7 @@ const handleInterBatchWait = async (
     }
 };
 
-export const generateSingleLineSpeech = async (text: string, voice: string, modelId: string, seed?: number, tone?: string, temperature: number = 0.7): Promise<Blob | null> => {
+export const generateSingleLineSpeech = async (text: string, voice: string, modelId: string, seed?: number, tone?: string, temperature: number = 0.8): Promise<Blob | null> => {
     const pcmData = await callGeminiTTS(text, voice, modelId, seed, tone, temperature);
     if (pcmData) return createWavBlob([pcmData]);
     return null;
