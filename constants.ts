@@ -51,7 +51,8 @@ export const TEXT_MODELS: TextModel[] = [
 export const TTS_MODELS: TextModel[] = [
   { id: 'gemini-2.5-flash-preview-tts', name: 'Gemini 2.5 Flash TTS (Recommended)', description: 'Specialized for high-fidelity speech & consistency' },
   { id: 'gemini-2.5-pro-preview-tts', name: 'Gemini 2.5 Pro TTS (Premium)', description: 'Optimized for powerful, low-latency natural speech' },
-  { id: 'gemini-2.5-flash-latest', name: 'Gemini 2.5 Flash (General)', description: 'Multimodal model, good for casual conversation' },
+  { id: 'gemini-2.5-flash-latest', name: 'Gemini 2.5 Flash (Latest)', description: 'Latest stable Flash model with audio capabilities' },
+  { id: 'gemini-2.5-pro-latest', name: 'Gemini 2.5 Pro (Latest)', description: 'Latest stable Pro model with advanced audio capabilities' },
   { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro (Experimental)', description: 'High-intelligence multimodal model with audio capabilities' },
 ];
 

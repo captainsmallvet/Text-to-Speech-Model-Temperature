@@ -11,7 +11,7 @@ import type { DialogueLine, SpeakerConfig, Voice, TextModel } from './types';
 import { AVAILABLE_VOICES, EXAMPLE_SCRIPT, TEXT_MODELS, TTS_MODELS, DEFAULT_TONE } from './constants';
 import { CopyIcon, LoadingSpinner } from './components/icons';
 
-const APP_VERSION = "v1.9.44 (Temp 0.75 & Step 0.05)";
+const APP_VERSION = "v1.9.45 (Updated Models)";
 
 const App: React.FC = () => {
   const [inputKey, setInputKey] = useState<string>('');
