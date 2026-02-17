@@ -11,7 +11,7 @@ import type { DialogueLine, SpeakerConfig, Voice, TextModel } from './types';
 import { AVAILABLE_VOICES, EXAMPLE_SCRIPT, TEXT_MODELS, TTS_MODELS, DEFAULT_TONE } from './constants';
 import { CopyIcon, LoadingSpinner } from './components/icons';
 
-const APP_VERSION = "v1.9.42 (Temp 0.8 Default)";
+const APP_VERSION = "v1.9.44 (Temp 0.75 & Step 0.05)";
 
 const App: React.FC = () => {
   const [inputKey, setInputKey] = useState<string>('');
@@ -132,7 +132,7 @@ const App: React.FC = () => {
               voice: config.voice || AVAILABLE_VOICES[0].id,
               volume: config.volume || 1,
               toneDescription: config.toneDescription || '',
-              temperature: config.temperature !== undefined ? config.temperature : 0.8,
+              temperature: config.temperature !== undefined ? config.temperature : 0.75,
               seed: config.seed || Math.floor(Math.random() * 1000000)
             }];
           }));
@@ -172,7 +172,7 @@ const App: React.FC = () => {
             voice: defaultVoice.id,
             volume: 1, 
             toneDescription: '',
-            temperature: 0.8,
+            temperature: 0.75,
             seed: 428057 + (voiceIndex * 100)
           });
         }

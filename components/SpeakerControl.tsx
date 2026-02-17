@@ -200,14 +200,14 @@ const SpeakerControl: React.FC<SpeakerControlProps> = ({
             </div>
             <div>
                 <label htmlFor={`temp-${speakerName}`} className="block text-xs font-medium text-gray-400 mb-1">
-                    Temperature: <span className="font-mono text-amber-400">{Number(config.temperature).toFixed(1)}</span>
+                    Temperature: <span className="font-mono text-amber-400">{Number(config.temperature).toFixed(2)}</span>
                 </label>
                 <input
                     type="range"
                     id={`temp-${speakerName}`}
                     min="0.5"
                     max="2"
-                    step="0.1"
+                    step="0.05"
                     value={config.temperature}
                     onChange={(e) => onConfigChange({ ...config, temperature: parseFloat(e.target.value) })}
                     className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
